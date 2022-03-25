@@ -4,11 +4,12 @@ import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
 
+import java.io.Serializable;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PropertyResponse {
+public class PropertyResponse implements Serializable {
     @SerializedName("bedrooms")
     private Integer bedrooms;
     @SerializedName("price")

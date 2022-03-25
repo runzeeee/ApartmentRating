@@ -1,22 +1,19 @@
 package com.example.apartmentrating.api;
 
 import com.example.apartmentrating.api.bean.PropertyResponse;
+import com.example.apartmentrating.tools.SerializeTools;
 
-import java.util.HashMap;
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import retrofit2.Call;
-import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class PropertyAPI {
 
-    private Map<String, String> HEADERMAP = new HashMap<String, String>() {{
-
-    }};
     private String BASEURL = "https://realty-mole-property-api.p.rapidapi.com/";
 
     /**
@@ -34,44 +31,71 @@ public class PropertyAPI {
      * @param offset    OPTIONAL. skip the specified number of properties. use this to page through large sets of properties.
      * @return
      */
-    public List<PropertyResponse> request(double longitude, double latitude, double radius, String state, String city, String address, double bedrooms, double bathrooms, int limit,
-                                          int offset) {
-        // construct query map
-        Map<String, Object> queryMap = new HashMap<>();
-        queryMap.put("longitude", longitude);
-        queryMap.put("latitude", latitude);
-        queryMap.put("radius", radius);
-        queryMap.put("state", state);
-        queryMap.put("city", city);
-        queryMap.put("address", address);
-        queryMap.put("bedrooms", bedrooms);
-        queryMap.put("bathrooms", bathrooms);
-        queryMap.put("limit", limit);
-        queryMap.put("offset", offset);
+    public List<PropertyResponse> request(
+            Double longitude, Object latitude, Double radius, String state, String city, String address,
+            Object bedrooms, Object bathrooms, Object limit, Object offset) {
 
-        // construct API instance
+        // Initialize API instance
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(BASEURL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build();
 
+        // Create Instance
         PropertyService service = retrofit.create(PropertyService.class);
 
-        Call<List<PropertyResponse>> call = service.getPropertyList(queryMap);
+        // Make request
+        Call<List<PropertyResponse>> call = service.getPropertyList(longitude, latitude, radius,
+                state, city, address, bedrooms, bathrooms, limit, offset);
         // synchronous
-//        call.execute();
-        // Asynchronous
-        call.enqueue(new Callback<List<PropertyResponse>>() {
-            @Override
-            public void onResponse(Call<List<PropertyResponse>> call, Response<List<PropertyResponse>> response) {
-                List<PropertyResponse> data = response.body();
-            }
-
-            @Override
-            public void onFailure(Call<List<PropertyResponse>> call, Throwable t) {
-
-            }
-        });
+        try {
+            Response<List<PropertyResponse>> response = call.execute();
+            assert response.body() != null;
+            saveData(response.body());
+            return response.body();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+//        // Asynchronous
+//        call.enqueue(new Callback<List<PropertyResponse>>() {
+//            @Override
+//            public void onResponse(Call<List<PropertyResponse>> call, Response<List<PropertyResponse>> response) {
+//                assert response.body() != null;
+//                saveData(response.body());
+//            }
+//
+//            @Override
+//            public void onFailure(Call<List<PropertyResponse>> call, Throwable t) {
+//                t.printStackTrace();
+//            }
+//        });
         return null;
+    }
+
+    // save data to file
+    private void saveData(List<PropertyResponse> data) {
+        try {
+            // save path
+            File file = new File("data/property.ser");
+            if (file.exists()) {
+                // 1. read saved object
+                List<PropertyResponse> saved = (List<PropertyResponse>) SerializeTools.readFromFile(file);
+                // 2. add response to data
+                saved.addAll(data);
+                // 3. write to file
+                SerializeTools.writeToFile(file, data);
+            } else {
+                // 1. write to file
+                SerializeTools.writeToFile(file, data);
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args) {
+        PropertyAPI api = new PropertyAPI();
+        List<PropertyResponse> data = api.request(null, null, 5.0,
+                "MA", "Boston", null, null, null, null, null);
     }
 }
